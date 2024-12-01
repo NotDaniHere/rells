@@ -1,2 +1,2 @@
-# CLI-based chat app.
-Server software and Client software included, alongside a library for your own custom software.
+# A work in progress still
+A project to be used by people in Aristotel.

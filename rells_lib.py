@@ -3,19 +3,20 @@ import json
 '''
 This is the Rells Library, made to ease the production process of creating the Client Software and Server Software for the Rells CLI Project. RLS LIB VERSION: 31.08.24
 '''
-class Client():
+class Client:
     def __init__(self, host, port, server_password, nickname, user_password):
         self.host = host
         self.port = port
         self.server_password = server_password
         self.nickname = nickname
         self.user_password = user_password
-        self.credentials = f'{self.nickname}/PASSWD_SEP/{self.user_password}/SERVER_SEP/{self.server_password}+'
+        self.credentials = f'{self.nickname}/PASSWD_SEP/{self.user_password}/SERVER_SEP/{self.server_password}'
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.running = True  # Control flag for managing connection state
         self.client.connect((self.host, self.port))
 
     def receive(self):
-        while True:
+        while self.running:
             try:
                 message = self.client.recv(1024).decode('ascii')
                 if message == 'LOGIN':
@@ -23,21 +24,35 @@ class Client():
                     self.client.send(self.credentials.encode('ascii'))
                 elif message == "LOGIN_ERROR":
                     print("Unable to connect to the server (wrong login details)")
-                    self.client.close()
-                    exit()
+                    self.stop_client()
+                elif message == "SIGNUP_END":
+                    print("You may now login with your newly created account.") 
+                    self.stop_client()
                 elif message.startswith(f'{self.nickname}: '):
-                    continue      
+                    continue 
                 else:
                     print(message)
-            except:
-                print("An error has occurred.")
-                self.client.close()
-                exit()
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                self.stop_client()
             
+    # Client class (in rells_lib)
     def write(self):
         while True:
-            message = f'<{self.nickname}>: {input(f"")}'
-            self.client.send(message.encode('ascii'))
+            try:
+                message = f'{self.nickname}: {input("")}'
+                self.client.send(message.encode('ascii'))
+            except Exception as e:
+                print(f"Error in write: {e}")
+                self.client.close()
+                break
+
+
+    def stop_client(self):
+        """Gracefully stops the client."""
+        self.running = False
+        self.client.close()
+        print("Connection closed.")
 class Profile():
     def __init__(self, profile_name, server_ip, server_port, server_password, user_nickname, user_password):
         self.profile_name = profile_name
@@ -62,63 +77,50 @@ class Server():
     def __init__(self) -> None:
         pass
     def validateCredentials(self, credentials):
-        for i, j in enumerate(credentials):
-            if j == "/":
-                if credentials[i+1] == "P":
-                    if credentials[i+2] == "A":
-                        if credentials[i+3] == "S":
-                            if credentials[i+4] == "S":
-                                if credentials[i+5] == "W":
-                                    if credentials[i+6] == "D":
-                                        if credentials[i+7] == "_":
-                                            if credentials[i+8] == "S":
-                                                if credentials[i+9] == "E":
-                                                    if credentials[i+10] == "P":
-                                                        if credentials[i+11] == '/':
-                                                            username = credentials[0:i]
-                                                            credentials_no_user = credentials[i+12:-1]
-                                                            print(credentials_no_user)
-                                                            for i, j in enumerate(credentials_no_user):
-                                                                if credentials_no_user[i] == "/":
-                                                                    if credentials_no_user[i+1] == "S":
-                                                                        if credentials_no_user[i+2] == "E":
-                                                                            if credentials_no_user[i+3] == "R":
-                                                                                if credentials_no_user[i+4] == "V":
-                                                                                    if credentials_no_user[i+5] == "E":
-                                                                                        if credentials_no_user[i+6] == "R":
-                                                                                            if credentials_no_user[i+7] == "_":
-                                                                                                if credentials_no_user[i+8] == "S":
-                                                                                                    if credentials_no_user[i+9] == "E":
-                                                                                                        if credentials_no_user[i+10] == "P":
-                                                                                                            if credentials_no_user[i+11] == '/':
-                                                                                                                user_password = credentials_no_user[0:i]
-                                                                                                                server_password = credentials_no_user[i+12:]
-                                                                                                                return(username, user_password, server_password)
+        try:
+            # Split the credentials into username, user_password, and server_password
+            username, remainder = credentials.split('/PASSWD_SEP/')
+            user_password, server_password = remainder.split('/SERVER_SEP/')
+            return username, user_password, server_password
+        except ValueError as e:
+            print(f"Error in validateCredentials: {e}")
+            print(f"Malformed credentials: {credentials}")
+            return None
+
     def loadConfig(self, path):
+        #Function loads the server config file.
+        #Server config file contains the IP (default, localhost), server port and also the server password.
         with open(path, 'r') as file:
             data = json.load(file)
         config = data['RELLS_SERVER_CONFIG']
         return config
     
     def saveConfig(self, path, cfg):
+        #Function saves the parsed in server config file.
+        #Server config format goes like this: {"RELLS_SERVER_CONFIG": [IP, PORT, SV_PASSWORD]}
         config_file = json.dumps({"RELLS_SERVER_CONFIG": cfg}, indent=4)
-
         with open(path, "w") as outfile:
             outfile.write(config_file)
 
 
     def loadUserProfiles(self, path):
+        #Function gets all of the user profiles in the parsed path, and uses them as the credentials_db folder.
         with open(path, 'r') as file:
             data = json.load(file)
         return data
     
     def saveUserProfiles(self, path, profiles):
+        #This function saves current user profiles.
+        #It removes all previous user profiles and replaces it with whatever credentials_db you parse.
+        #Credentials_db format goes as follows: {"Username": "Password", "Username2": "Password2"}
         user_profiles = json.dumps(profiles, indent=4)
 
         with open(path, "w") as outfile:
             outfile.write(user_profiles)
 
     def addUserProfile(self, path, profile):
+        #This function adds a new user profile. 
+        #The user profile object is a dictionary that uses the username as the key and the password is its contents
         with open(path, 'r') as file:
             data = json.load(file)
         data.update(profile)
