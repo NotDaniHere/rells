@@ -1,2 +1,2 @@
 # A work in progress still
-A project to be used by people in Aristotel.
+An open-source chatroom software, made in Python!
