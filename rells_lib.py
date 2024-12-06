@@ -1,5 +1,6 @@
 import socket
 import json
+import os
 '''
 This is the Rells Library, made to ease the production process of creating the Client Software and Server Software for the Rells CLI Project. RLS LIB VERSION: 31.08.24
 '''
@@ -64,15 +65,26 @@ class Profile():
         self.profile = [profile_name, server_ip, server_port, server_password, user_nickname, user_password]
     def getProfile(self):
         return self.profile
+    
     def loadJsonDataClient(self, path):
-        with open(path, 'r') as file:
-            data = json.load(file)
-        return data
-    def saveJsonDataClient(self, path, profiles):
-        json_object = json.dumps(profiles, indent=4)
+        """Load JSON data from a file, or return an empty dictionary if the file is missing or malformed."""
+        if not os.path.exists(path):
+            print(f"Warning: {path} not found. Returning empty data.")
+            return {}
+        try:
+            with open(path, 'r') as file:
+                data = json.load(file)
+            return data
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error reading {path}: {e}. Returning empty data.")
+            return {}
 
+    def saveJsonDataClient(self, path, profiles):
+        """Save JSON data to a file."""
+        json_object = json.dumps(profiles, indent=4)
         with open(path, "w") as outfile:
             outfile.write(json_object)
+
 class Server():
     def __init__(self) -> None:
         pass
@@ -88,12 +100,18 @@ class Server():
             return None
 
     def loadConfig(self, path):
-        #Function loads the server config file.
-        #Server config file contains the IP (default, localhost), server port and also the server password.
-        with open(path, 'r') as file:
-            data = json.load(file)
-        config = data['RELLS_SERVER_CONFIG']
-        return config
+        """Load server configuration from a JSON file, or return default values if the file is missing or malformed."""
+        if not os.path.exists(path):
+            print(f"Warning: {path} not found. Using default configuration.")
+            return ["127.0.0.1", 5000, "default_server_password", "default_signup_password"]
+        try:
+            with open(path, 'r') as file:
+                data = json.load(file)
+            return data.get('RELLS_SERVER_CONFIG', ["127.0.0.1", 5000, "default_server_password", "default_signup_password"])
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error reading {path}: {e}. Using default configuration.")
+            return ["127.0.0.1", 5000, "default_server_password", "default_signup_password"]
+
     
     def saveConfig(self, path, cfg):
         #Function saves the parsed in server config file.
@@ -102,19 +120,22 @@ class Server():
         with open(path, "w") as outfile:
             outfile.write(config_file)
 
-
     def loadUserProfiles(self, path):
-        #Function gets all of the user profiles in the parsed path, and uses them as the credentials_db folder.
-        with open(path, 'r') as file:
-            data = json.load(file)
-        return data
-    
-    def saveUserProfiles(self, path, profiles):
-        #This function saves current user profiles.
-        #It removes all previous user profiles and replaces it with whatever credentials_db you parse.
-        #Credentials_db format goes as follows: {"Username": "Password", "Username2": "Password2"}
-        user_profiles = json.dumps(profiles, indent=4)
+        """Load user profiles from a JSON file, or return an empty dictionary if the file is missing or malformed."""
+        if not os.path.exists(path):
+            print(f"Warning: {path} not found. Starting with an empty user profile database.")
+            return {}
+        try:
+            with open(path, 'r') as file:
+                data = json.load(file)
+            return data
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error reading {path}: {e}. Starting with an empty user profile database.")
+            return {}
 
+    def saveUserProfiles(self, path, profiles):
+        """Save user profiles to a file."""
+        user_profiles = json.dumps(profiles, indent=4)
         with open(path, "w") as outfile:
             outfile.write(user_profiles)
 

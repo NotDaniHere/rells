@@ -2,8 +2,8 @@ from rells_lib import Client
 from rells_lib import Profile
 import threading
 placeholder_profile = Profile("a", "a", "a", "a", "a", "a")
-profiles = placeholder_profile.loadJsonDataClient('profiles.json')
 jsonPath = "profiles.json"
+profiles = placeholder_profile.loadJsonDataClient(jsonPath)
 noProfiles = False
 if profiles == {}:
     noProfiles = True
